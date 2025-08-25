@@ -1,4 +1,5 @@
 <<<<<<< HEAD
+<<<<<<< HEAD
 # Let's LEK this!
 
 `Let's LEK this!` to aplikacja webowa stworzona, aby przygotować do Lekarskiego Egzaminu Końcowego (LEK). Zbudowana z myślą o efektywnej nauce, łączy w sobie profesjonalny design z intuicyjną funkcjonalnością, dostępną wprost z Twojej przeglądarki na dowolnym urządzeniu mobilnym.
