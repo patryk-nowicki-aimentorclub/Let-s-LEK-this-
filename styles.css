@@ -1,0 +1,8 @@
+:root {
+  /* This file is not directly used by Tailwind but is good for reference.
+     The theme is applied by adding the 'dark' class to the <html> element.
+     See `index.html` and `useTheme.ts`.
+     Tailwind's `dark:` utility classes handle the theme switching.
+     e.g., `bg-white dark:bg-slate-900`
+  */
+}
