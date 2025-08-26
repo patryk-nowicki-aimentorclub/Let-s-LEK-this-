@@ -1,7 +1,8 @@
 import React, { useRef, useLayoutEffect } from 'react';
+import { Flashcard } from '../types';
 
 // A component that automatically adjusts font-size to fit its content within the container.
-const AutoScalingText: React.FC<{ content: string }> = ({ content }) => {
+const AutoScalingText: React.FC<{ content: string; isAnswer?: boolean }> = ({ content, isAnswer }) => {
     const containerRef = useRef<HTMLDivElement>(null);
     const textRef = useRef<HTMLDivElement>(null);
 
@@ -64,8 +65,10 @@ const AutoScalingText: React.FC<{ content: string }> = ({ content }) => {
                     lineHeight: 1.25, 
                     textAlign: 'center', 
                     wordBreak: 'break-word',
-                    hyphens: 'auto'
+                    hyphens: 'auto',
+                    whiteSpace: 'pre-line'
                 }}
+                className={isAnswer ? 'w-full' : ''}
             >
                 {content}
             </div>
@@ -77,11 +80,10 @@ const AutoScalingText: React.FC<{ content: string }> = ({ content }) => {
 interface FlipCardProps {
   isFlipped: boolean;
   setIsFlipped: (isFlipped: boolean) => void;
-  frontContent: string;
-  backContent: string;
+  card: Partial<Flashcard>;
 }
 
-const FlipCard: React.FC<FlipCardProps> = ({ isFlipped, setIsFlipped, frontContent, backContent }) => {
+const FlipCard: React.FC<FlipCardProps> = ({ isFlipped, setIsFlipped, card }) => {
   const handleFlip = () => setIsFlipped(!isFlipped);
 
   return (
@@ -91,15 +93,22 @@ const FlipCard: React.FC<FlipCardProps> = ({ isFlipped, setIsFlipped, frontConte
         style={{ transform: isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)' }}
       >
         {/* Front of the card */}
-        <div className="absolute w-full h-full [backface-visibility:hidden] bg-white dark:bg-slate-800 rounded-2xl shadow-xl flex items-center justify-center text-center cursor-pointer border-4 border-slate-200 dark:border-slate-700">
-           <AutoScalingText content={frontContent} />
+        <div className="absolute w-full h-full [backface-visibility:hidden] bg-white dark:bg-slate-800 rounded-2xl shadow-xl flex flex-col items-center justify-center text-center cursor-pointer border-4 border-slate-200 dark:border-slate-700">
+           <div className="flex-grow w-full flex items-center justify-center">
+             <AutoScalingText content={card.question || ''} />
+           </div>
+           {card.subCategory && (
+             <div className="w-full p-2 border-t-2 border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 text-sm italic">
+               {card.subCategory}
+             </div>
+           )}
         </div>
         {/* Back of the card */}
         <div
           className="absolute w-full h-full [backface-visibility:hidden] bg-blue-50 dark:bg-blue-900/70 rounded-2xl shadow-xl flex items-center justify-center text-center cursor-pointer border-4 border-blue-200 dark:border-blue-700"
           style={{ transform: 'rotateY(180deg)' }}
         >
-          <AutoScalingText content={backContent} />
+          <AutoScalingText content={card.answer || ''} isAnswer={(card.answer || '').includes('\n')} />
         </div>
       </div>
     </div>

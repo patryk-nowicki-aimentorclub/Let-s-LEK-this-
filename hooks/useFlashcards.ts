@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { v4 as uuidv4 } from 'uuid';
-import { Flashcard, User, FlashcardsContextType } from '../types';
+import { Flashcard, User, FlashcardsContextType, Subscription } from '../types';
 import { INITIAL_FLASHCARDS } from '../data';
 import { INITIAL_CATEGORIES, INITIAL_USERS } from '../constants';
 import { encrypt, decrypt, hashPassword } from '../services/geminiService';
@@ -66,12 +66,23 @@ export const FlashcardProvider: React.FC<{ children: ReactNode }> = ({ children 
         } else {
           // No users in storage, so create and store the initial admin user
           const initialUsersWithHashes: User[] = await Promise.all(
-            INITIAL_USERS.map(async (user) => ({
-              id: user.id,
-              name: user.name,
-              login: user.login,
-              password_hash: await hashPassword(user.password_placeholder),
-            }))
+            INITIAL_USERS.map(async (user) => {
+              const isPremiumUser = user.login === 'admin' || user.login === 'ula' || user.login === 'test';
+              return {
+                id: user.id,
+                name: user.name,
+                login: user.login,
+                password_hash: await hashPassword(user.password_placeholder),
+                isActive: true,
+                subscription: isPremiumUser 
+                  ? {
+                      type: 'premium',
+                      startDate: Date.now(),
+                      endDate: Number.MAX_SAFE_INTEGER // Represents unlimited
+                    }
+                  : null
+              };
+            })
           );
           const jsonToEncrypt = JSON.stringify(initialUsersWithHashes);
           const encryptedData = await encrypt(jsonToEncrypt);
@@ -170,15 +181,30 @@ export const FlashcardProvider: React.FC<{ children: ReactNode }> = ({ children 
   }, [setFlashcards]);
     
   // User Management
-  const addUser = useCallback(async (userData: Omit<User, 'id' | 'password_hash'> & { password_plaintext: string }) => {
+  const addUser = useCallback(async (userData: Omit<User, 'id' | 'password_hash' | 'isActive' | 'subscription'> & { password_plaintext: string }) => {
     const password_hash = await hashPassword(userData.password_plaintext);
     const newUser: User = { 
       id: uuidv4(), 
       name: userData.name,
       login: userData.login,
-      password_hash
+      password_hash,
+      isActive: true,
+      subscription: null
     };
     const updatedUsers = [...users, newUser];
+    await persistUsers(updatedUsers);
+  }, [users, persistUsers]);
+
+  const registerUser = useCallback(async (userData: Omit<User, 'id' | 'password_hash' | 'isActive' | 'subscription'> & { password_plaintext: string }): Promise<{success: boolean, message: string}> => {
+    if (users.some(u => u.login.toLowerCase() === userData.login.toLowerCase())) {
+        return { success: false, message: 'Login jest już zajęty.' };
+    }
+    await addUser(userData);
+    return { success: true, message: 'Rejestracja pomyślna. Możesz się teraz zalogować.' };
+  }, [users, addUser]);
+
+  const updateUser = useCallback(async (id: string, updatedData: Partial<User>) => {
+    const updatedUsers = users.map(u => (u.id === id ? { ...u, ...updatedData } : u));
     await persistUsers(updatedUsers);
   }, [users, persistUsers]);
 
@@ -198,12 +224,15 @@ export const FlashcardProvider: React.FC<{ children: ReactNode }> = ({ children 
     await persistUsers(updatedUsers);
   }, [users, persistUsers]);
 
-  const login = useCallback(async (login: string, password_plaintext: string): Promise<boolean> => {
+  const login = useCallback(async (login: string, password_plaintext: string): Promise<User | null> => {
       const user = users.find(u => u.login === login);
-      if (!user) return false;
+      if (!user) return null;
 
       const inputHash = await hashPassword(password_plaintext);
-      return inputHash === user.password_hash;
+      if (inputHash === user.password_hash) {
+          return user;
+      }
+      return null;
   }, [users]);
   
   // Category and Base Management
@@ -246,8 +275,10 @@ export const FlashcardProvider: React.FC<{ children: ReactNode }> = ({ children 
     getFlashcardsByCategory,
     users,
     addUser,
+    updateUser,
     deleteUser,
     login,
+    registerUser,
     categories,
     addCategory,
     updateCategory,

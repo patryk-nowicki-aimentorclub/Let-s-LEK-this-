@@ -1,4 +1,5 @@
 
+
 import React, { useState, useCallback, useMemo } from 'react';
 import { Flashcard } from '../types';
 import FlipCard from './FlipCard';
@@ -36,53 +37,56 @@ const FlashcardScreen: React.FC<FlashcardScreenProps> = ({ deck, onFinish }) => 
     setIsFlipped(false);
 
     setTimeout(() => {
-      // 1. Update card pools
-      if (status === 'known') {
-        setKnownCards(prev => new Set(prev).add(cardId));
-        setReviewPool(prev => {
-          const newSet = new Set(prev);
-          newSet.delete(cardId);
-          return newSet;
-        });
-      } else {
-        setReviewPool(prev => new Set(prev).add(cardId));
-        setKnownCards(prev => {
-          const newSet = new Set(prev);
-          newSet.delete(cardId);
-          return newSet;
-        });
-      }
+        // --- Calculate next state for pools ---
+        const isKnown = status === 'known';
+        const newKnownCards = new Set(knownCards);
+        const newReviewPool = new Set(reviewPool);
 
-      // 2. Navigate to the next card or change session state
-      if (sessionState === 'studying') {
-        if (currentIndex >= studyDeck.length - 1) {
-          setReviewPool(currentPool => {
-            const updatedPool = status === 'unknown' ? new Set(currentPool).add(cardId) : currentPool;
-            if (updatedPool.size > 0) {
-              setSessionState('reviewing');
-              setCurrentIndex(0);
-            } else {
-              onFinish();
-            }
-            return updatedPool;
-          });
+        if (isKnown) {
+            newKnownCards.add(cardId);
+            newReviewPool.delete(cardId);
         } else {
-          setCurrentIndex(prev => prev + 1);
+            newKnownCards.delete(cardId);
+            newReviewPool.add(cardId);
         }
-      } else { // 'reviewing'
-        setReviewPool(currentPool => {
-          if (status === 'known' && currentPool.size === 1 && currentPool.has(cardId)) {
-             onFinish();
-             return new Set();
-          }
-          const nextIndex = (currentIndex + 1) % studyDeck.length;
-          setCurrentIndex(nextIndex >= studyDeck.length-1 ? 0 : nextIndex);
-          return currentPool;
-        });
-      }
-      setIsProcessing(false);
+        
+        // --- Atomically update state ---
+        setKnownCards(newKnownCards);
+        setReviewPool(newReviewPool);
+
+        // --- Handle navigation based on the calculated new state ---
+        if (sessionState === 'studying') {
+            if (currentIndex >= deck.length - 1) { // End of initial deck
+                if (newReviewPool.size > 0) {
+                    setSessionState('reviewing');
+                    setCurrentIndex(0);
+                } else {
+                    onFinish();
+                }
+            } else {
+                setCurrentIndex(c => c + 1);
+            }
+        } else { // 'reviewing'
+            if (isKnown) {
+                // Card was marked known and removed from review pool
+                if (newReviewPool.size === 0) {
+                    onFinish();
+                } else {
+                    // Adjust index if we were at the end of the shrinking list
+                    if (currentIndex >= newReviewPool.size) {
+                        setCurrentIndex(0);
+                    }
+                    // Otherwise, index remains correct, automatically showing the next item
+                }
+            } else {
+                // Card marked unknown, stays in review. Cycle to the next one.
+                setCurrentIndex(c => (c + 1) % studyDeck.length);
+            }
+        }
+
+        setIsProcessing(false);
     }, 250); // Delay allows for flip animation and prevents double clicks
-  }, [currentIndex, studyDeck, sessionState, onFinish, isProcessing, reviewPool]);
+  }, [currentIndex, deck, sessionState, onFinish, isProcessing, reviewPool, knownCards, studyDeck.length]);
 
 
   const handlePrev = () => {
@@ -104,6 +108,15 @@ const FlashcardScreen: React.FC<FlashcardScreenProps> = ({ deck, onFinish }) => 
     : `Sesja Fiszki`;
 
   if (!currentCard) {
+    // This can happen briefly during state transition, or when the deck is empty.
+    // If the session state isn't finished yet, it's a transient state. Let's wait.
+    // If it persists, it means the session is over.
+    if (sessionState !== 'finished') {
+        // A simple fix for transient empty deck is to call onFinish if there are no more cards to review
+        if (sessionState === 'reviewing' && reviewPool.size === 0) {
+            onFinish();
+        }
+    }
     return (
       <div className="flex flex-col items-center justify-center min-h-screen p-4 text-center">
         <h2 className="text-3xl font-bold text-blue-500 dark:text-blue-400 mb-4">Gratulacje! Sesja ukończona.</h2>
@@ -117,7 +130,7 @@ const FlashcardScreen: React.FC<FlashcardScreenProps> = ({ deck, onFinish }) => 
   return (
     <div className="min-h-screen flex flex-col items-center p-4 sm:p-6 overflow-hidden">
         <div className="w-full max-w-4xl z-10">
-            <header className="flex justify-between items-center mb-4">
+            <header className="flex justify-between items-center mb-4 pr-24">
                 <button onClick={onFinish} className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-600 font-semibold transition-colors duration-200 text-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:focus:ring-offset-slate-900">
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
@@ -151,8 +164,7 @@ const FlashcardScreen: React.FC<FlashcardScreenProps> = ({ deck, onFinish }) => 
                 key={currentCard.id}
                 isFlipped={isFlipped}
                 setIsFlipped={setIsFlipped}
-                frontContent={currentCard.question}
-                backContent={currentCard.answer}
+                card={currentCard}
             />
 
             <div className="flex justify-center items-center gap-4 mt-6">

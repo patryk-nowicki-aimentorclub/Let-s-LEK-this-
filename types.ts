@@ -1,3 +1,19 @@
+export interface Subscription {
+  type: SubscriptionType;
+  startDate: number; // timestamp
+  endDate: number; // timestamp
+}
+
+export const SubscriptionTypes = {
+    'dzienny': { durationDays: 1, name: 'Dzienny' },
+    'tygodniowy': { durationDays: 7, name: 'Tygodniowy' },
+    'miesięczny': { durationDays: 30, name: 'Miesięczny' },
+    'roczny': { durationDays: 365, name: 'Roczny' },
+    'premium': { durationDays: null, name: 'Premium (∞)' },
+};
+export type SubscriptionType = keyof typeof SubscriptionTypes;
+
+
 export interface Flashcard {
   id: string;
   question: string;
@@ -5,6 +21,7 @@ export interface Flashcard {
   category: string;
   base: string; // Changed from subcategory
   createdAt: number;
+  subCategory?: string;
 }
 
 export interface User {
@@ -13,6 +30,8 @@ export interface User {
     login: string;
     // NOTE: This field stores the SHA-256 hash of the password.
     password_hash: string;
+    isActive: boolean;
+    subscription: Subscription | null;
 }
 
 export interface FlashcardsContextType {
@@ -24,9 +43,12 @@ export interface FlashcardsContextType {
   getFlashcardsByCategory: (categories: string[]) => Flashcard[];
   
   users: User[];
-  addUser: (userData: Omit<User, 'id' | 'password_hash'> & { password_plaintext: string }) => Promise<void>;
+  addUser: (userData: Omit<User, 'id' | 'password_hash' | 'isActive' | 'subscription'> & { password_plaintext: string }) => Promise<void>;
+  updateUser: (id: string, updatedData: Partial<User>) => Promise<void>;
   deleteUser: (id: string) => Promise<void>;
-  login: (login: string, password_plaintext: string) => Promise<boolean>;
+  login: (login: string, password_plaintext: string) => Promise<User | null>;
+  registerUser: (userData: Omit<User, 'id' | 'password_hash' | 'isActive' | 'subscription'> & { password_plaintext: string }) => Promise<{success: boolean; message: string;}>;
+
 
   categories: string[];
   addCategory: (name: string) => void;

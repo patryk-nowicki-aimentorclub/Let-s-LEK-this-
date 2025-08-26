@@ -1,10 +1,10 @@
 
 import React, { useState, ChangeEvent, useRef, FormEvent, useMemo } from 'react';
 import { useFlashcards } from '../hooks/useFlashcards';
-import { Flashcard, User } from '../types';
+import { Flashcard, User, Subscription, SubscriptionTypes, SubscriptionType } from '../types';
 
 interface AdminPanelProps {
-  onLoginSuccess?: () => void;
+  onLoginSuccess?: (user: User) => void;
   onLogout?: () => void;
   isAdmin?: boolean;
 }
@@ -13,7 +13,7 @@ type AdminTab = 'flashcards' | 'users' | 'content';
 
 // --- Style Constants ---
 const inputClasses = "w-full p-2 rounded bg-slate-100 dark:bg-slate-700 text-slate-900 dark:text-white border border-slate-300 dark:border-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500";
-const btnPrimary = "bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg";
+const btnPrimary = "bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed";
 const btnSecondary = "bg-slate-200 hover:bg-slate-300 dark:bg-slate-600 dark:hover:bg-slate-700 text-slate-800 dark:text-white font-bold py-2 px-4 rounded";
 const textDanger = "font-medium text-red-600 dark:text-red-500 hover:underline";
 const textWarning = "font-medium text-amber-600 dark:text-amber-500 hover:underline";
@@ -158,8 +158,19 @@ const FlashcardsTab: React.FC<{ onImportClick: () => void }> = ({ onImportClick 
 };
 
 const UsersTab: React.FC = () => {
-    const { users, addUser, deleteUser } = useFlashcards();
+    const { users, addUser, deleteUser, updateUser } = useFlashcards();
     const [newUser, setNewUser] = useState({ name: '', login: '', password: ''});
+    
+    // State for the new subscription modal
+    const [isSubModalOpen, setIsSubModalOpen] = useState(false);
+    const [subModalData, setSubModalData] = useState<{ user: User, type: SubscriptionType } | null>(null);
+    const [newSubscriptionStartDate, setNewSubscriptionStartDate] = useState('');
+
+    const toISOStringLocal = (date: Date) => {
+        const offset = date.getTimezoneOffset();
+        const dateWithOffset = new Date(date.getTime() - (offset*60*1000));
+        return dateWithOffset.toISOString().slice(0,16);
+    };
 
     const handleAddUser = async (e: FormEvent) => {
         e.preventDefault();
@@ -172,6 +183,51 @@ const UsersTab: React.FC = () => {
             setNewUser({ name: '', login: '', password: ''});
         }
     };
+    
+    const isSystemUser = (user: User) => user.login === 'admin' || user.login === 'ula';
+    
+    const handleStatusChange = async (user: User, newStatus: boolean) => {
+        if (isSystemUser(user)) return;
+        await updateUser(user.id, { isActive: newStatus });
+    };
+
+    const handleSubscriptionSelect = (user: User, selection: SubscriptionType | 'none') => {
+        if (user.subscription?.type === selection) return;
+
+        if (selection === 'none') {
+            if (window.confirm(`Czy na pewno chcesz usunąć subskrypcję użytkownika "${user.name}"?`)) {
+                updateUser(user.id, { subscription: null });
+            }
+        } else if (selection === 'premium') {
+             if (window.confirm(`Czy na pewno chcesz przypisać subskrypcję Premium (bezterminową) użytkownikowi "${user.name}"?`)) {
+                const newSubscription: Subscription = {
+                    type: 'premium',
+                    startDate: Date.now(),
+                    endDate: Number.MAX_SAFE_INTEGER
+                };
+                updateUser(user.id, { subscription: newSubscription });
+            }
+        } else {
+            setSubModalData({ user, type: selection });
+            setNewSubscriptionStartDate(toISOStringLocal(new Date()));
+            setIsSubModalOpen(true);
+        }
+    };
+
+    const handleSaveNewSubscription = async () => {
+        if (!subModalData || !newSubscriptionStartDate) return;
+
+        const startDate = new Date(newSubscriptionStartDate).getTime();
+        const durationDays = SubscriptionTypes[subModalData.type].durationDays;
+        const endDate = startDate + (durationDays || 0) * 24 * 60 * 60 * 1000;
+
+        const newSubscription: Subscription = { type: subModalData.type, startDate, endDate };
+        await updateUser(subModalData.user.id, { subscription: newSubscription });
+        
+        setIsSubModalOpen(false);
+        setSubModalData(null);
+    };
+
 
     return (
         <div className="bg-white dark:bg-slate-800 p-6 rounded-lg">
@@ -184,17 +240,87 @@ const UsersTab: React.FC = () => {
                 <input required type="password" value={newUser.password} onChange={e => setNewUser(u => ({...u, password: e.target.value}))} placeholder="Hasło" className={inputClasses} />
                 <button type="submit" className={btnPrimary}>Dodaj użytkownika</button>
             </form>
-             <ul className="space-y-2">
-                {users.map(user => (
-                    <li key={user.id} className="flex justify-between items-center p-3 bg-slate-100 dark:bg-slate-700 rounded-lg">
+            <div className="overflow-x-auto">
+                <table className="w-full text-sm text-left text-slate-600 dark:text-slate-300">
+                     <thead className="text-xs text-blue-800 dark:text-blue-300 uppercase bg-slate-100 dark:bg-slate-700">
+                        <tr>
+                            <th className="px-4 py-3">Nazwa</th>
+                            <th className="px-4 py-3">Login</th>
+                            <th className="px-4 py-3">Status</th>
+                            <th className="px-4 py-3">Subskrypcja</th>
+                            <th className="px-4 py-3">Wygasa</th>
+                            <th className="px-4 py-3">Akcje</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {users.map(user => (
+                            <tr key={user.id} className="border-b border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700/50">
+                                <td className="px-4 py-3 font-medium text-slate-900 dark:text-white">{user.name}</td>
+                                <td className="px-4 py-3">{user.login}</td>
+                                <td className="px-4 py-3 min-w-[120px]">
+                                     <select
+                                        value={user.isActive ? 'active' : 'inactive'}
+                                        onChange={(e) => handleStatusChange(user, e.target.value === 'active')}
+                                        disabled={isSystemUser(user)}
+                                        className={`${inputClasses} text-xs py-1 px-2 w-full ${user.isActive ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 border-green-300' : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200 border-red-300'}`}
+                                    >
+                                        <option value="active">Aktywny</option>
+                                        <option value="inactive">Nieaktywny</option>
+                                    </select>
+                                </td>
+                                <td className="px-4 py-3 min-w-[140px]">
+                                     <select
+                                        value={user.subscription?.type || 'none'}
+                                        onChange={(e) => handleSubscriptionSelect(user, e.target.value as SubscriptionType | 'none')}
+                                        disabled={isSystemUser(user)}
+                                        className={`${inputClasses} text-xs py-1 px-2 w-full`}
+                                    >
+                                        <option value="none">Brak</option>
+                                        {Object.entries(SubscriptionTypes).map(([key, { name }]) => (
+                                            <option key={key} value={key}>{name}</option>
+                                        ))}
+                                    </select>
+                                </td>
+                                <td className="px-4 py-3 text-xs text-slate-500 dark:text-slate-400 min-w-[150px]">
+                                    {user.subscription ? (
+                                        user.subscription.type === 'premium' ? (
+                                            <span className="font-semibold">Nieograniczona (∞)</span>
+                                        ) : (
+                                            new Date(user.subscription.endDate).toLocaleString('pl-PL', { dateStyle: 'short', timeStyle: 'short' })
+                                        )
+                                    ) : '-'}
+                                </td>
+                                <td className="px-4 py-3">
+                                    {!isSystemUser(user) && <button onClick={() => window.confirm(`Czy na pewno chcesz usunąć użytkownika "${user.name}"?`) && deleteUser(user.id)} className={textDanger}>Usuń</button>}
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+
+            {isSubModalOpen && subModalData && (
+                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={() => setIsSubModalOpen(false)}>
+                    <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl p-6 w-full max-w-sm" onClick={e => e.stopPropagation()}>
+                        <h2 className="text-xl font-bold mb-4">Ustaw subskrypcję dla: {subModalData.user.name}</h2>
+                        <p className="mb-4 text-slate-600 dark:text-slate-300">Typ subskrypcji: <strong>{SubscriptionTypes[subModalData.type].name}</strong></p>
                         <div>
-                            <span className="font-medium text-slate-900 dark:text-white">{user.name}</span>
-                            <span className="text-sm text-slate-500 dark:text-slate-400 ml-2">({user.login})</span>
+                            <label htmlFor="sub-start-new" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Data rozpoczęcia</label>
+                            <input 
+                                id="sub-start-new" 
+                                type="datetime-local" 
+                                value={newSubscriptionStartDate} 
+                                onChange={e => setNewSubscriptionStartDate(e.target.value)} 
+                                className={inputClasses} 
+                            />
                         </div>
-                        <button onClick={() => window.confirm(`Czy na pewno chcesz usunąć użytkownika "${user.name}"?`) && deleteUser(user.id)} className={textDanger}>Usuń</button>
-                    </li>
-                ))}
-            </ul>
+                        <div className="mt-6 flex justify-end gap-4">
+                            <button onClick={handleSaveNewSubscription} className={btnPrimary}>Zapisz i aktywuj</button>
+                            <button onClick={() => setIsSubModalOpen(false)} className={btnSecondary}>Anuluj</button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
@@ -299,18 +425,18 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onLoginSuccess, onLogout, isAdm
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-  const [activeTab, setActiveTab] = useState<AdminTab>('flashcards');
+  const [activeTab, setActiveTab] = useState<AdminTab>('users');
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    const success = await login(username, password);
-    if (success) {
+    const user = await login(username, password);
+    if (user && user.login === 'admin') {
       setError('');
-      if (onLoginSuccess) onLoginSuccess();
+      if (onLoginSuccess) onLoginSuccess(user);
     } else {
-      setError('Nieprawidłowy login lub hasło.');
+      setError('Nieprawidłowy login lub hasło administratora.');
     }
   };
   
@@ -354,7 +480,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onLoginSuccess, onLogout, isAdm
 
   return (
     <div className="p-4 sm:p-8">
-      <header className="flex flex-wrap justify-between items-center mb-6 gap-4">
+      <header className="flex flex-wrap justify-between items-center mb-6 gap-4 pr-24">
         <h1 className="text-3xl font-bold text-blue-800 dark:text-blue-300">Panel Administratora</h1>
         <button onClick={onLogout} className="bg-slate-200 hover:bg-slate-300 dark:bg-slate-600 dark:hover:bg-slate-700 text-slate-800 dark:text-white font-bold py-2 px-4 rounded-lg">Wyloguj</button>
       </header>
@@ -362,9 +488,9 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onLoginSuccess, onLogout, isAdm
        <input type="file" accept=".json" ref={fileInputRef} onChange={handleFileChange} className="hidden" />
 
       <nav className="flex border-b border-slate-200 dark:border-slate-700">
+        <button onClick={() => setActiveTab('users')} className={getTabClass('users')}>Użytkownicy ({users.length})</button>
         <button onClick={() => setActiveTab('flashcards')} className={getTabClass('flashcards')}>Fiszki ({flashcards.length})</button>
         <button onClick={() => setActiveTab('content')} className={getTabClass('content')}>Zarządzanie Treścią</button>
-        <button onClick={() => setActiveTab('users')} className={getTabClass('users')}>Użytkownicy ({users.length})</button>
       </nav>
       
       <main className="mt-6">
