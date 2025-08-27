@@ -1,4 +1,5 @@
 
+
 import React, { useState } from 'react';
 import { useFlashcards } from '../hooks/useFlashcards';
 import FlipCard from './FlipCard';
@@ -106,11 +107,13 @@ const DemoFlashcards: React.FC = () => {
                 </div>
             )}
             <div className="w-full max-w-2xl relative">
+                {/* FIX: Added missing 'status' prop required by FlipCard component. */}
                 <FlipCard
                     key={currentCard.id}
                     isFlipped={isFlipped}
                     setIsFlipped={setIsFlipped}
                     card={currentCard}
+                    status="unseen"
                 />
             </div>
              <div className="flex justify-center items-center gap-4 mt-6">
@@ -187,11 +190,11 @@ const WelcomeScreen: React.FC<{ onLoginSuccess: (user: User) => void, onAdminCli
                 }
             `}</style>
             
-            <nav className="p-4 sm:p-6 flex justify-between items-center pr-24">
+            <nav className="absolute top-0 left-0 right-0 p-4 sm:p-6 flex justify-between items-center">
                  <h1 className="text-2xl font-bold text-slate-900 dark:text-white">
                     Let's <span className="text-blue-600 dark:text-blue-500">LEK</span> this!
                 </h1>
-                <form onSubmit={handleLogin} className="hidden sm:flex items-center gap-2">
+                <form onSubmit={handleLogin} className="hidden sm:flex items-center gap-2 mr-16">
                     <input type="text" value={login} onChange={e => setLogin(e.target.value)} placeholder="Login" aria-label="Login" className="p-2 rounded bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm" required />
                     <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Hasło" aria-label="Hasło" className="p-2 rounded bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm" required />
                     <button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition-colors text-sm">Zaloguj</button>
@@ -204,10 +207,10 @@ const WelcomeScreen: React.FC<{ onLoginSuccess: (user: User) => void, onAdminCli
 
             <main className="p-4 sm:p-6">
                 <header className="text-center my-12 sm:my-20">
-                    <h2 className="text-5xl sm:text-7xl font-extrabold text-slate-900 dark:text-white tracking-tight">
+                    <h2 className="text-4xl sm:text-6xl lg:text-7xl font-extrabold text-slate-900 dark:text-white tracking-tight">
                         Twoja interaktywna <span className="text-blue-600 dark:text-blue-500">baza fiszek</span> do egzaminu <span className="text-blue-600 dark:text-blue-500">LEK</span>
                     </h2>
-                    <p className="mt-4 text-lg text-slate-600 dark:text-slate-400 max-w-3xl mx-auto">
+                    <p className="mt-4 text-base sm:text-lg text-slate-600 dark:text-slate-400 max-w-3xl mx-auto">
                         Ucz się mądrzej, nie ciężej. Opanuj materiał dzięki tysiącom pytań w interaktywnej i przyjaznej formie, stworzonej z myślą o przyszłych lekarzach.
                     </p>
                 </header>
@@ -247,7 +250,7 @@ const WelcomeScreen: React.FC<{ onLoginSuccess: (user: User) => void, onAdminCli
                                 <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
                                 <div className="w-3 h-3 bg-green-500 rounded-full"></div>
                             </div>
-                            <div className="bg-slate-50 dark:bg-slate-900 rounded-md min-h-[480px] flex items-center justify-center p-4">
+                            <div className="bg-slate-50 dark:bg-slate-900 rounded-md min-h-[400px] sm:min-h-[480px] flex items-center justify-center p-4">
                                 <DemoFlashcards />
                             </div>
                         </div>

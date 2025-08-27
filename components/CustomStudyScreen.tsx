@@ -154,7 +154,7 @@ const CustomStudyScreen: React.FC<CustomStudyScreenProps> = ({ onStartStudy, onB
                     <label htmlFor={`cat-${category}`} className="ml-3 text-lg font-semibold text-slate-800 dark:text-slate-200 cursor-pointer">{category}</label>
                   </div>
                   {(allBasesInCategory.length > 0) && (
-                    <div className="mt-3 pl-8 grid grid-cols-2 gap-x-4 gap-y-2">
+                    <div className="mt-3 pl-8 grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-2">
                       {allBasesInCategory.map(base => (
                         <div key={base} className="flex items-center">
                            <input
@@ -184,7 +184,7 @@ const CustomStudyScreen: React.FC<CustomStudyScreenProps> = ({ onStartStudy, onB
         <section className="border-t-2 border-slate-200 dark:border-slate-700 pt-6 mt-8">
           <h2 className="text-2xl font-bold text-blue-700 dark:text-blue-400 mb-4">Wylosuj fiszki ze wszystkich</h2>
            <p className="text-slate-600 dark:text-slate-400 mb-6">Wybierz liczbę pytań do losowej sesji ze wszystkich dostępnych kategorii i baz.</p>
-          <div className="grid grid-cols-3 sm:grid-cols-5 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
             {randomCounts.map(count => (
               flashcards.length >= count && (
                 <button

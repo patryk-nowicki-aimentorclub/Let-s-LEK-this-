@@ -234,7 +234,7 @@ const UsersTab: React.FC = () => {
             <p className="text-sm text-slate-500 dark:text-slate-400 bg-slate-100/50 dark:bg-slate-900/50 p-3 rounded-md mb-6 border border-slate-200 dark:border-slate-700">
                 <b>Uwaga:</b> Dane użytkowników są przechowywane w sposób zaszyfrowany w pamięci przeglądarki. Hasła są hashowane przed zaszyfrowaniem.
             </p>
-            <form onSubmit={handleAddUser} className="grid grid-cols-1 sm:grid-cols-4 gap-4 items-end mb-6">
+            <form onSubmit={handleAddUser} className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 items-end mb-6">
                 <input required value={newUser.name} onChange={e => setNewUser(u => ({...u, name: e.target.value}))} placeholder="Imię" className={inputClasses} />
                 <input required value={newUser.login} onChange={e => setNewUser(u => ({...u, login: e.target.value}))} placeholder="Login" className={inputClasses} />
                 <input required type="password" value={newUser.password} onChange={e => setNewUser(u => ({...u, password: e.target.value}))} placeholder="Hasło" className={inputClasses} />
@@ -255,7 +255,7 @@ const UsersTab: React.FC = () => {
                     <tbody>
                         {users.map(user => (
                             <tr key={user.id} className="border-b border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700/50">
-                                <td className="px-4 py-3 font-medium text-slate-900 dark:text-white">{user.name}</td>
+                                <td className="px-4 py-3 font-medium text-slate-900 dark:text-white min-w-[120px]">{user.name}</td>
                                 <td className="px-4 py-3">{user.login}</td>
                                 <td className="px-4 py-3 min-w-[120px]">
                                      <select
@@ -480,14 +480,14 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onLoginSuccess, onLogout, isAdm
 
   return (
     <div className="p-4 sm:p-8">
-      <header className="flex flex-wrap justify-between items-center mb-6 gap-4 pr-24">
+      <header className="flex flex-wrap justify-between items-center mb-6 gap-4">
         <h1 className="text-3xl font-bold text-blue-800 dark:text-blue-300">Panel Administratora</h1>
         <button onClick={onLogout} className="bg-slate-200 hover:bg-slate-300 dark:bg-slate-600 dark:hover:bg-slate-700 text-slate-800 dark:text-white font-bold py-2 px-4 rounded-lg">Wyloguj</button>
       </header>
       
        <input type="file" accept=".json" ref={fileInputRef} onChange={handleFileChange} className="hidden" />
 
-      <nav className="flex border-b border-slate-200 dark:border-slate-700">
+      <nav className="flex flex-wrap border-b border-slate-200 dark:border-slate-700">
         <button onClick={() => setActiveTab('users')} className={getTabClass('users')}>Użytkownicy ({users.length})</button>
         <button onClick={() => setActiveTab('flashcards')} className={getTabClass('flashcards')}>Fiszki ({flashcards.length})</button>
         <button onClick={() => setActiveTab('content')} className={getTabClass('content')}>Zarządzanie Treścią</button>

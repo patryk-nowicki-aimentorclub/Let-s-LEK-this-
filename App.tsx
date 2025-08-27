@@ -114,7 +114,9 @@ const AppContent: React.FC = () => {
   return (
      <div className="relative bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-200 min-h-screen font-sans">
       <ThemeSwitcher />
-      {renderView()}
+      <div className="pt-16 sm:pt-20">
+        {renderView()}
+      </div>
     </div>
   )
 }

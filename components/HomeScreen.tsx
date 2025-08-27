@@ -81,11 +81,11 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectCategory, onAdminClick,
 
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-4 sm:p-6">
+    <div className="min-h-screen flex flex-col items-center justify-center p-4 sm:p-6 lg:p-8">
         {currentUser && (
-            <div className="absolute top-4 right-24 flex items-center gap-4 z-40">
+            <div className="absolute top-4 right-16 sm:right-24 flex items-center gap-2 sm:gap-4 z-40">
                 <div className="hidden sm:flex flex-col items-end">
-                    <span className="text-slate-600 dark:text-slate-400">Zalogowano jako: <strong>{currentUser.name}</strong></span>
+                    <span className="text-slate-600 dark:text-slate-400 text-sm">Zalogowano jako: <strong>{currentUser.name}</strong></span>
                      {currentUser.subscription?.type === 'premium' ? (
                         <span className="text-xs text-green-500 font-semibold">(Dostęp bezterminowy)</span>
                     ) : currentUser.subscription && currentUser.subscription.endDate > Date.now() ? (
@@ -101,19 +101,19 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectCategory, onAdminClick,
                 >
                     <AdminIcon className="w-5 h-5" />
                 </button>
-                <button onClick={onLogout} className="bg-slate-200 hover:bg-slate-300 dark:bg-slate-600 dark:hover:bg-slate-700 text-slate-800 dark:text-white font-bold py-2 px-4 rounded-lg text-sm transition-colors">
+                <button onClick={onLogout} className="bg-slate-200 hover:bg-slate-300 dark:bg-slate-600 dark:hover:bg-slate-700 text-slate-800 dark:text-white font-bold py-1 px-3 text-xs sm:py-2 sm:px-4 sm:text-sm rounded-lg transition-colors">
                     Wyloguj
                 </button>
             </div>
         )}
         <header className="text-center mb-8">
-            <h1 className="text-5xl sm:text-6xl font-extrabold text-slate-900 dark:text-white tracking-tight">
+            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-slate-900 dark:text-white tracking-tight">
                 Let's <span className="text-blue-600 dark:text-blue-500">LEK</span> this!
             </h1>
             <p className="mt-2 text-lg text-slate-600 dark:text-slate-400">Twoje interaktywne fiszki do egzaminu LEK</p>
         </header>
         
-        <main className="w-full max-w-4xl bg-white dark:bg-slate-800 rounded-2xl shadow-2xl p-6 sm:p-8">
+        <main className="w-full max-w-4xl bg-white dark:bg-slate-800 rounded-2xl shadow-2xl p-4 sm:p-6 md:p-8">
             {!hasActiveSubscription && (
                 <div className="bg-yellow-100 dark:bg-yellow-900/50 border-l-4 border-yellow-500 text-yellow-700 dark:text-yellow-200 p-4 rounded-md mb-6" role="alert">
                     <p className="font-bold">Brak dostępu</p>
